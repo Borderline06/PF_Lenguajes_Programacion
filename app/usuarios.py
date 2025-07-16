@@ -69,11 +69,88 @@ def cargar_vista(parent):
 
         tk.Button(ventana_crear, text="Guardar", command=guardar).pack(pady=10)
 
+    def editar_usuario():
+        seleccion = tree.selection()
+        if not seleccion:
+            messagebox.showwarning("Selecciona", "Seleccione un usuario para editar")
+            return
+
+        valores = tree.item(seleccion[0], "values")
+        user_id, nombre_actual, rol_actual = valores
+
+        def guardar_edicion():
+            nuevo_nombre = entry_nombre.get().strip()
+            nueva_contra = entry_contrasena.get().strip()
+            nuevo_rol = combo_rol.get()
+
+            if not nuevo_nombre or not nueva_contra or not nuevo_rol:
+                messagebox.showwarning("Advertencia", "Complete todos los campos")
+                return
+
+            try:
+                conexion = conectar()
+                cursor = conexion.cursor()
+                cursor.execute("UPDATE usuarios SET nombre=%s, contraseña=%s, rol=%s WHERE id=%s",
+                               (nuevo_nombre, nueva_contra, nuevo_rol, user_id))
+                conexion.commit()
+                conexion.close()
+                messagebox.showinfo("Éxito", "Usuario actualizado correctamente")
+                ventana_editar.destroy()
+                cargar_usuarios()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo actualizar usuario\n{e}")
+
+        ventana_editar = tk.Toplevel()
+        ventana_editar.title("Editar Usuario")
+        ventana_editar.geometry("300x200")
+
+        tk.Label(ventana_editar, text="Nuevo Nombre:").pack()
+        entry_nombre = tk.Entry(ventana_editar)
+        entry_nombre.insert(0, nombre_actual)
+        entry_nombre.pack()
+
+        tk.Label(ventana_editar, text="Nueva Contraseña:").pack()
+        entry_contrasena = tk.Entry(ventana_editar, show="*")
+        entry_contrasena.pack()
+
+        tk.Label(ventana_editar, text="Nuevo Rol:").pack()
+        combo_rol = ttk.Combobox(ventana_editar, values=["admin", "vendedor"], state="readonly")
+        combo_rol.pack()
+        combo_rol.set(rol_actual)
+
+        tk.Button(ventana_editar, text="Guardar Cambios", command=guardar_edicion).pack(pady=10)
+
+    def eliminar_usuario():
+        seleccion = tree.selection()
+        if not seleccion:
+            messagebox.showwarning("Selecciona", "Seleccione un usuario para eliminar")
+            return
+
+        valores = tree.item(seleccion[0], "values")
+        user_id, nombre, _ = valores
+
+        confirmar = messagebox.askyesno("Confirmar", f"¿Seguro que deseas eliminar al usuario '{nombre}'?")
+        if not confirmar:
+            return
+
+        try:
+            conexion = conectar()
+            cursor = conexion.cursor()
+            cursor.execute("DELETE FROM usuarios WHERE id = %s", (user_id,))
+            conexion.commit()
+            conexion.close()
+            messagebox.showinfo("Éxito", "Usuario eliminado correctamente")
+            cargar_usuarios()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo eliminar usuario\n{e}")
+
     # Botones
     frame_botones = tk.Frame(parent)
     frame_botones.pack(pady=10)
 
     tk.Button(frame_botones, text="Cargar Usuarios", command=cargar_usuarios).grid(row=0, column=0, padx=5)
     tk.Button(frame_botones, text="Crear Usuario", command=crear_usuario).grid(row=0, column=1, padx=5)
+    tk.Button(frame_botones, text="Editar Usuario", command=editar_usuario).grid(row=0, column=2, padx=5)
+    tk.Button(frame_botones, text="Eliminar Usuario", command=eliminar_usuario).grid(row=0, column=3, padx=5)
 
     cargar_usuarios()
